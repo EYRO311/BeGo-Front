@@ -18,6 +18,7 @@ const Tabs = ({ onOrderSelect }) => {
         
         const response = await fetch(url);
         const data = await response.json();
+        console.log("DATA FETCHED FROM API:", data);
         
         if (data?.status === 200) {
           setOrders(Array.isArray(data.result) ? data.result : [data.result]);
@@ -30,6 +31,7 @@ const Tabs = ({ onOrderSelect }) => {
     };
 
     fetchOrders();
+    
   }, [activeTab]);
 
   const filteredOrders = orders.filter(order => 
@@ -89,5 +91,6 @@ const Tabs = ({ onOrderSelect }) => {
     </div>
   );
 };
+
 
 export default Tabs;

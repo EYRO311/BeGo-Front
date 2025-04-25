@@ -4,45 +4,61 @@ import { FaCheck, FaPhone, FaEnvelope, FaCalendarAlt, FaTruck, FaMapMarkerAlt, F
 const OrderDetails = ({ order, onBack }) => {
   const [activeTab, setActiveTab] = useState('details');
   const [activeDestination, setActiveDestination] = useState('pickup');
+  console.log("ORDER PASSED TO OrderDetails:", order);
 
-  // Función para obtener datos de manera segura con múltiples alternativas
-  const getSafeData = (obj, ...paths) => {
-    if (!obj) return 'N/A'; // Manejo de objeto undefined
-    for (const path of paths) {
-      const value = path.split('.').reduce((acc, key) => acc && acc[key], obj);
-      if (value !== undefined && value !== null) return value;
+  // Función ultra segura para obtener datos
+  const getValue = (obj, path, defaultValue = 'N/A') => {
+    if (!obj) return defaultValue;
+    try {
+      const value = path.split('.').reduce((acc, key) => {
+        if (acc && typeof acc === 'object' && key in acc) {
+          return acc[key];
+        }
+        return undefined;
+      }, obj);
+      
+      return value !== undefined && value !== null ? value : defaultValue;
+    } catch {
+      return defaultValue;
     }
-    return 'N/A';
   };
 
   if (!order) return <div className="no-order">No order selected</div>;
 
-  // Obtener pickup y dropoff con múltiples alternativas
-  const pickup = order.destinations?.[0] || order.pickup || {};
-  const dropoff = order.destinations?.[1] || order.dropoff || {};
+  // Obtener datos con valores por defecto seguros
+  const pickup = getValue(order, 'destinations.0', {});
+  const dropoff = getValue(order, 'destinations.1', {});
 
-  // Obtener información de contacto con múltiples alternativas
+  // Información de contacto segura
   const getContactInfo = (location) => ({
-    name: getSafeData(location, 'contact_info.name', 'contact.name', 'contact_info.contact_name'),
-    telephone: getSafeData(location, 'contact_info.telephone', 'contact.telephone', 'contact_info.raw_telephone', 'contact.phone'),
-    email: getSafeData(location, 'contact_info.email', 'contact.email')
+    name: getValue(location, 'contact_info.name') || 
+          getValue(location, 'contact.name') || 'N/A',
+    telephone: getValue(location, 'contact_info.telephone') || 
+               getValue(location, 'contact_info.raw_telephone') || 
+               getValue(location, 'contact.telephone') || 'N/A',
+    email: getValue(location, 'contact_info.email') || 
+           getValue(location, 'contact.email') || 'N/A'
   });
 
   const pickupContact = getContactInfo(pickup);
   const dropoffContact = getContactInfo(dropoff);
 
-  // Obtener información de carga
-  const cargoType = getSafeData(order, 'cargo.type', 'load_type');
-  const cargoDescription = getSafeData(order, 'cargo.description', 'load_description');
-  const cargoWeight = getSafeData(order, 'cargo.weight.0', 'cargo.weight', 'weight');
-  const cargoWeightUnit = getSafeData(order, 'cargo.weight_unit', 'weight_unit', 'unit') || 'kg';
-  const hazardousType = getSafeData(order, 'cargo.hazardous_type');
+  // Información de carga segura
+  const cargoInfo = {
+    type: getValue(order, 'cargo.type', 'N/A'),
+    description: getValue(order, 'cargo.description', 'N/A'),
+    weight: getValue(order, 'cargo.weight.0', 'N/A'),
+    weightUnit: getValue(order, 'cargo.weight_unit', 'N/A'),
+    hazardousType: getValue(order, 'cargo.hazardous_type', null) // null si no existe
+  };
 
-  // Formatear fecha con múltiples alternativas
-  const formatDate = (dateObj) => {
-    if (!dateObj) return 'N/A';
+  // Formateo de fecha seguro
+  const formatDate = (dateValue) => {
     try {
-      const date = Array.isArray(dateObj) ? new Date(dateObj[0]) : new Date(dateObj);
+      if (!dateValue) return 'N/A';
+      const date = Array.isArray(dateValue) ? 
+                   new Date(dateValue[0]) : 
+                   new Date(dateValue);
       return isNaN(date.getTime()) ? 'N/A' : date.toLocaleString();
     } catch {
       return 'N/A';
@@ -62,13 +78,13 @@ const OrderDetails = ({ order, onBack }) => {
       <div className="status-timeline">
         {statusItems.map((item, index) => (
           <div key={index} className="status-item">
-            <div className={`status-circle ${order.status >= item.status ? 'active' : ''}`}>
-              {order.status >= item.status ? <FaCheck /> : index + 1}
+            <div className={`status-circle ${getValue(order, 'status', 0) >= item.status ? 'active' : ''}`}>
+              {getValue(order, 'status', 0) >= item.status ? <FaCheck /> : index + 1}
             </div>
             <div className="status-label">
               {item.label}
-              {item.status === 3 && order.driver && (
-                <span className="status-detail"> by {order.driver.nickname}</span>
+              {item.status === 3 && getValue(order, 'driver') && (
+                <span className="status-detail"> by {getValue(order, 'driver.nickname')}</span>
               )}
             </div>
           </div>
@@ -85,18 +101,18 @@ const OrderDetails = ({ order, onBack }) => {
 
       <div className="avatar-container">
         <div className="avatar-circle">
-          {getSafeData(order.driver, 'driver_thumbnail', 'thumbnail') !== 'N/A' ? (
-            <img src={getSafeData(order.driver, 'driver_thumbnail', 'thumbnail')} alt="Driver" />
+          {getValue(order, 'driver.driver_thumbnail') !== 'N/A' ? (
+            <img src={getValue(order, 'driver.driver_thumbnail')} alt="Driver" />
           ) : (
-            <span>{getSafeData(order.driver, 'nickname.0', 'name.0', 'driver_name.0')?.toUpperCase() || '?'}</span>
+            <span>{getValue(order, 'driver.nickname.0', '?').toUpperCase()}</span>
           )}
         </div>
-        <p className="avatar-name">{getSafeData(order.driver, 'nickname', 'name', 'driver_name') || 'Driver'}</p>
+        <p className="avatar-name">{getValue(order, 'driver.nickname', 'Driver')}</p>
       </div>
 
       <div className="order-details-header">
-        <h2>Order #{order.order_number || 'N/A'}</h2>
-        <span className="order-reference">Reference: {getSafeData(order, 'reference_number', 'ref_number', 'order_ref')}</span>
+        <h2>Order #{getValue(order, 'order_number', 'N/A')}</h2>
+        <span className="order-reference">Reference: {getValue(order, 'reference_number', 'N/A')}</span>
       </div>
 
       <div className="details-tabs">
@@ -135,9 +151,9 @@ const OrderDetails = ({ order, onBack }) => {
             {activeDestination === 'pickup' ? (
               <>
                 <h3>Pickup Location</h3>
-                <p className="address">{getSafeData(pickup, 'address', 'raw_address', 'location')}</p>
+                <p className="address">{getValue(pickup, 'address', getValue(pickup, 'raw_address', 'No pickup address available'))}</p>
                 <div className="contact-info">
-                  <p><FaCalendarAlt /> {formatDate(getSafeData(pickup, 'start_date', 'date', 'pickup_date'))}</p>
+                  <p><FaCalendarAlt /> {formatDate(getValue(pickup, 'start_date'))}</p>
                   <p><strong>Contact:</strong> {pickupContact.name}</p>
                   <p><FaPhone /> {pickupContact.telephone}</p>
                   <p><FaEnvelope /> {pickupContact.email}</p>
@@ -146,9 +162,9 @@ const OrderDetails = ({ order, onBack }) => {
             ) : (
               <>
                 <h3>Dropoff Location</h3>
-                <p className="address">{getSafeData(dropoff, 'address', 'raw_address', 'location')}</p>
+                <p className="address">{getValue(dropoff, 'address', getValue(dropoff, 'raw_address', 'No dropoff address available'))}</p>
                 <div className="contact-info">
-                  <p><FaCalendarAlt /> {formatDate(getSafeData(dropoff, 'start_date', 'date', 'dropoff_date'))}</p>
+                  <p><FaCalendarAlt /> {formatDate(getValue(dropoff, 'start_date'))}</p>
                   <p><strong>Contact:</strong> {dropoffContact.name}</p>
                   <p><FaPhone /> {dropoffContact.telephone}</p>
                   <p><FaEnvelope /> {dropoffContact.email}</p>
@@ -159,11 +175,11 @@ const OrderDetails = ({ order, onBack }) => {
 
           <div className="cargo-card">
             <h3>Cargo Information</h3>
-            <p><strong>Type:</strong> {cargoType}</p>
-            <p><strong>Description:</strong> {cargoDescription}</p>
-            <p><strong>Weight:</strong> {cargoWeight} {cargoWeightUnit}</p>
-            {hazardousType !== 'N/A' && (
-              <p><strong>Hazardous Type:</strong> {hazardousType}</p>
+            <p><strong>Type:</strong> {cargoInfo.type}</p>
+            <p><strong>Description:</strong> {cargoInfo.description}</p>
+            <p><strong>Weight:</strong> {cargoInfo.weight} {cargoInfo.weightUnit}</p>
+            {cargoInfo.hazardousType && (
+              <p><strong>Hazardous Type:</strong> {cargoInfo.hazardousType}</p>
             )}
           </div>
         </>
@@ -171,9 +187,9 @@ const OrderDetails = ({ order, onBack }) => {
         <div className="timeline-card">
           {renderStatusTimeline()}
           <button
-            className={`track-btn ${order.status >= 3 ? 'active' : 'disabled'}`}
-            onClick={() => order.status >= 3 && console.log("Track Order")}
-            disabled={order.status < 3}
+            className={`track-btn ${getValue(order, 'status', 0) >= 3 ? 'active' : 'disabled'}`}
+            onClick={() => getValue(order, 'status', 0) >= 3 && console.log("Track Order")}
+            disabled={getValue(order, 'status', 0) < 3}
           >
             Track Order
           </button>
