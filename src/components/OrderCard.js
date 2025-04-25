@@ -61,12 +61,12 @@ const OrderCard = ({ order, isExpanded, onToggleExpand, onDetailsClick }) => {
                 PICKUP
               </h4>
               <span className="destination-date">
-                {pickup?.startDate ? new Date(pickup.startDate).toLocaleDateString() : 'N/A'}
+              {pickup?.start_date ? new Date(pickup.start_date).toLocaleDateString() : 'N/A'}
               </span>
             </div>
             <p className="destination-address">{pickup?.address || 'No pickup address available'}</p>
             <p className="destination-time">
-              {pickup?.startDate ? new Date(pickup.startDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}
+            {pickup?.start_date ? new Date(pickup.start_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}
             </p>
           </div>
 

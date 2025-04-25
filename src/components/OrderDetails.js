@@ -7,8 +7,12 @@ const OrderDetails = ({ order, onBack }) => {
 
   if (!order) return <div className="no-order">No order selected</div>;
 
+  // Extraer información de pickup y dropoff de la estructura correcta
   const pickup = order.destinations?.[0];
   const dropoff = order.destinations?.[1];
+
+  // Extraer información de contacto del conductor
+  const driverContact = order.driver || {};
 
   const renderStatusTimeline = () => {
     const statusItems = [
@@ -26,7 +30,12 @@ const OrderDetails = ({ order, onBack }) => {
             <div className={`status-circle ${order.status >= item.status ? 'active' : ''}`}>
               {order.status >= item.status ? <FaCheck /> : index + 1}
             </div>
-            <div className="status-label">{item.label}</div>
+            <div className="status-label">
+              {item.label}
+              {item.status === 3 && order.driver && (
+                <span className="status-detail"> by {order.driver.nickname}</span>
+              )}
+            </div>
           </div>
         ))}
       </div>
@@ -38,17 +47,17 @@ const OrderDetails = ({ order, onBack }) => {
       <button className="back-button" onClick={onBack}>
         <FaArrowLeft /> Back
       </button>
+
       <div className="avatar-container">
-  <div className="avatar-circle">
-    {/* Si no hay imagen, muestra las iniciales o ícono */}
-    {order.driver?.profile_image_url ? (
-      <img src={order.driver.profile_image_url} alt="Driver" />
-    ) : (
-      <span>{order.driver?.nickname?.charAt(0)?.toUpperCase() || '?'}</span>
-    )}
-  </div>
-  <p className="avatar-name">{order.driver?.nickname || 'Driver'}</p>
-</div>
+        <div className="avatar-circle">
+          {order.driver?.driver_thumbnail ? (
+            <img src={order.driver.driver_thumbnail} alt="Driver" />
+          ) : (
+            <span>{order.driver?.nickname?.charAt(0)?.toUpperCase() || '?'}</span>
+          )}
+        </div>
+        <p className="avatar-name">{order.driver?.nickname || 'Driver'}</p>
+      </div>
 
       <div className="order-details-header">
         <h2>Order #{order.order_number}</h2>
@@ -91,22 +100,22 @@ const OrderDetails = ({ order, onBack }) => {
             {activeDestination === 'pickup' ? (
               <>
                 <h3>Pickup Location</h3>
-                <p className="address">{pickup?.address || 'No pickup address available'}</p>
+                <p className="address">{pickup?.address || pickup?.raw_address || 'No pickup address available'}</p>
                 <div className="contact-info">
-                  <p><FaCalendarAlt /> {pickup?.startDate ? new Date(pickup.startDate).toLocaleString() : 'N/A'}</p>
+                  <p><FaCalendarAlt /> {pickup?.start_date ? new Date(pickup.start_date).toLocaleString() : 'N/A'}</p>
                   <p><strong>Contact:</strong> {pickup?.contact_info?.name || 'N/A'}</p>
-                  <p><FaPhone /> {pickup?.contact_info?.telephone || 'N/A'}</p>
+                  <p><FaPhone /> {pickup?.contact_info?.telephone || pickup?.contact_info?.raw_telephone || 'N/A'}</p>
                   <p><FaEnvelope /> {pickup?.contact_info?.email || 'N/A'}</p>
                 </div>
               </>
             ) : (
               <>
                 <h3>Dropoff Location</h3>
-                <p className="address">{dropoff?.address || 'No dropoff address available'}</p>
+                <p className="address">{dropoff?.address || dropoff?.raw_address || 'No dropoff address available'}</p>
                 <div className="contact-info">
-                  <p><FaCalendarAlt /> {dropoff?.startDate ? new Date(dropoff.startDate).toLocaleString() : 'N/A'}</p>
+                  <p><FaCalendarAlt /> {dropoff?.start_date ? new Date(dropoff.start_date).toLocaleString() : 'N/A'}</p>
                   <p><strong>Contact:</strong> {dropoff?.contact_info?.name || 'N/A'}</p>
-                  <p><FaPhone /> {dropoff?.contact_info?.telephone || 'N/A'}</p>
+                  <p><FaPhone /> {dropoff?.contact_info?.telephone || dropoff?.contact_info?.raw_telephone || 'N/A'}</p>
                   <p><FaEnvelope /> {dropoff?.contact_info?.email || 'N/A'}</p>
                 </div>
               </>
@@ -117,7 +126,10 @@ const OrderDetails = ({ order, onBack }) => {
             <h3>Cargo Information</h3>
             <p><strong>Type:</strong> {order.cargo?.type || 'N/A'}</p>
             <p><strong>Description:</strong> {order.cargo?.description || 'N/A'}</p>
-            <p><strong>Weight:</strong> {order.cargo?.weigth?.[0] || '0'} {order.cargo?.weight_unit || 'kg'}</p>
+            <p><strong>Weight:</strong> {order.cargo?.weight?.[0] || 0} {order.cargo?.weight_unit || 'kg'}</p>
+            {order.cargo?.hazardous_type && (
+              <p><strong>Hazardous Type:</strong> {order.cargo.hazardous_type}</p>
+            )}
           </div>
         </>
       ) : (
