@@ -1,23 +1,27 @@
-import logo from './logo.svg';
+import React, { useState } from 'react';
+import Tabs from './components/tabs';
+import OrderDetails from './components/OrderDetails';
 import './App.css';
 
 function App() {
+  const [currentView, setCurrentView] = useState('tabs');
+  const [selectedOrder, setSelectedOrder] = useState(null);
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+    <div className="app-container">
+      {currentView === 'tabs' ? (
+        <Tabs 
+          onOrderSelect={(order) => {
+            setSelectedOrder(order);
+            setCurrentView('details');
+          }} 
+        />
+      ) : (
+        <OrderDetails 
+          order={selectedOrder} 
+          onBack={() => setCurrentView('tabs')} 
+        />
+      )}
     </div>
   );
 }
