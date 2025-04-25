@@ -5,14 +5,49 @@ const OrderDetails = ({ order, onBack }) => {
   const [activeTab, setActiveTab] = useState('details');
   const [activeDestination, setActiveDestination] = useState('pickup');
 
+  // Función para obtener datos de manera segura con múltiples alternativas
+  const getSafeData = (obj, ...paths) => {
+    if (!obj) return 'N/A'; // Manejo de objeto undefined
+    for (const path of paths) {
+      const value = path.split('.').reduce((acc, key) => acc && acc[key], obj);
+      if (value !== undefined && value !== null) return value;
+    }
+    return 'N/A';
+  };
+
   if (!order) return <div className="no-order">No order selected</div>;
 
-  // Extraer información de pickup y dropoff de la estructura correcta
-  const pickup = order.destinations?.[0];
-  const dropoff = order.destinations?.[1];
+  // Obtener pickup y dropoff con múltiples alternativas
+  const pickup = order.destinations?.[0] || order.pickup || {};
+  const dropoff = order.destinations?.[1] || order.dropoff || {};
 
-  // Extraer información de contacto del conductor
-  const driverContact = order.driver || {};
+  // Obtener información de contacto con múltiples alternativas
+  const getContactInfo = (location) => ({
+    name: getSafeData(location, 'contact_info.name', 'contact.name', 'contact_info.contact_name'),
+    telephone: getSafeData(location, 'contact_info.telephone', 'contact.telephone', 'contact_info.raw_telephone', 'contact.phone'),
+    email: getSafeData(location, 'contact_info.email', 'contact.email')
+  });
+
+  const pickupContact = getContactInfo(pickup);
+  const dropoffContact = getContactInfo(dropoff);
+
+  // Obtener información de carga
+  const cargoType = getSafeData(order, 'cargo.type', 'load_type');
+  const cargoDescription = getSafeData(order, 'cargo.description', 'load_description');
+  const cargoWeight = getSafeData(order, 'cargo.weight.0', 'cargo.weight', 'weight');
+  const cargoWeightUnit = getSafeData(order, 'cargo.weight_unit', 'weight_unit', 'unit') || 'kg';
+  const hazardousType = getSafeData(order, 'cargo.hazardous_type');
+
+  // Formatear fecha con múltiples alternativas
+  const formatDate = (dateObj) => {
+    if (!dateObj) return 'N/A';
+    try {
+      const date = Array.isArray(dateObj) ? new Date(dateObj[0]) : new Date(dateObj);
+      return isNaN(date.getTime()) ? 'N/A' : date.toLocaleString();
+    } catch {
+      return 'N/A';
+    }
+  };
 
   const renderStatusTimeline = () => {
     const statusItems = [
@@ -50,18 +85,18 @@ const OrderDetails = ({ order, onBack }) => {
 
       <div className="avatar-container">
         <div className="avatar-circle">
-          {order.driver?.driver_thumbnail ? (
-            <img src={order.driver.driver_thumbnail} alt="Driver" />
+          {getSafeData(order.driver, 'driver_thumbnail', 'thumbnail') !== 'N/A' ? (
+            <img src={getSafeData(order.driver, 'driver_thumbnail', 'thumbnail')} alt="Driver" />
           ) : (
-            <span>{order.driver?.nickname?.charAt(0)?.toUpperCase() || '?'}</span>
+            <span>{getSafeData(order.driver, 'nickname.0', 'name.0', 'driver_name.0')?.toUpperCase() || '?'}</span>
           )}
         </div>
-        <p className="avatar-name">{order.driver?.nickname || 'Driver'}</p>
+        <p className="avatar-name">{getSafeData(order.driver, 'nickname', 'name', 'driver_name') || 'Driver'}</p>
       </div>
 
       <div className="order-details-header">
-        <h2>Order #{order.order_number}</h2>
-        <span className="order-reference">Reference: {order.reference_number || 'N/A'}</span>
+        <h2>Order #{order.order_number || 'N/A'}</h2>
+        <span className="order-reference">Reference: {getSafeData(order, 'reference_number', 'ref_number', 'order_ref')}</span>
       </div>
 
       <div className="details-tabs">
@@ -100,23 +135,23 @@ const OrderDetails = ({ order, onBack }) => {
             {activeDestination === 'pickup' ? (
               <>
                 <h3>Pickup Location</h3>
-                <p className="address">{pickup?.address || pickup?.raw_address || 'No pickup address available'}</p>
+                <p className="address">{getSafeData(pickup, 'address', 'raw_address', 'location')}</p>
                 <div className="contact-info">
-                  <p><FaCalendarAlt /> {pickup?.start_date ? new Date(pickup.start_date).toLocaleString() : 'N/A'}</p>
-                  <p><strong>Contact:</strong> {pickup?.contact_info?.name || 'N/A'}</p>
-                  <p><FaPhone /> {pickup?.contact_info?.telephone || pickup?.contact_info?.raw_telephone || 'N/A'}</p>
-                  <p><FaEnvelope /> {pickup?.contact_info?.email || 'N/A'}</p>
+                  <p><FaCalendarAlt /> {formatDate(getSafeData(pickup, 'start_date', 'date', 'pickup_date'))}</p>
+                  <p><strong>Contact:</strong> {pickupContact.name}</p>
+                  <p><FaPhone /> {pickupContact.telephone}</p>
+                  <p><FaEnvelope /> {pickupContact.email}</p>
                 </div>
               </>
             ) : (
               <>
                 <h3>Dropoff Location</h3>
-                <p className="address">{dropoff?.address || dropoff?.raw_address || 'No dropoff address available'}</p>
+                <p className="address">{getSafeData(dropoff, 'address', 'raw_address', 'location')}</p>
                 <div className="contact-info">
-                  <p><FaCalendarAlt /> {dropoff?.start_date ? new Date(dropoff.start_date).toLocaleString() : 'N/A'}</p>
-                  <p><strong>Contact:</strong> {dropoff?.contact_info?.name || 'N/A'}</p>
-                  <p><FaPhone /> {dropoff?.contact_info?.telephone || dropoff?.contact_info?.raw_telephone || 'N/A'}</p>
-                  <p><FaEnvelope /> {dropoff?.contact_info?.email || 'N/A'}</p>
+                  <p><FaCalendarAlt /> {formatDate(getSafeData(dropoff, 'start_date', 'date', 'dropoff_date'))}</p>
+                  <p><strong>Contact:</strong> {dropoffContact.name}</p>
+                  <p><FaPhone /> {dropoffContact.telephone}</p>
+                  <p><FaEnvelope /> {dropoffContact.email}</p>
                 </div>
               </>
             )}
@@ -124,11 +159,11 @@ const OrderDetails = ({ order, onBack }) => {
 
           <div className="cargo-card">
             <h3>Cargo Information</h3>
-            <p><strong>Type:</strong> {order.cargo?.type || 'N/A'}</p>
-            <p><strong>Description:</strong> {order.cargo?.description || 'N/A'}</p>
-            <p><strong>Weight:</strong> {order.cargo?.weight?.[0] || 0} {order.cargo?.weight_unit || 'kg'}</p>
-            {order.cargo?.hazardous_type && (
-              <p><strong>Hazardous Type:</strong> {order.cargo.hazardous_type}</p>
+            <p><strong>Type:</strong> {cargoType}</p>
+            <p><strong>Description:</strong> {cargoDescription}</p>
+            <p><strong>Weight:</strong> {cargoWeight} {cargoWeightUnit}</p>
+            {hazardousType !== 'N/A' && (
+              <p><strong>Hazardous Type:</strong> {hazardousType}</p>
             )}
           </div>
         </>
